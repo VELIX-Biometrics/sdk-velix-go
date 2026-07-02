@@ -7,50 +7,36 @@ import (
 	"net/http"
 )
 
-// EventsModule CRUD de eventos.
+// EventsModule convidados de evento via API key (Velix Events). Cobertura
+// MÍNIMA — apenas criar e consultar convidado, único mapeado na spec pública
+// (task #593). Não expõe CRUD de eventos: não existe superfície de API key
+// para isso hoje em api-velix-identity-core.
 type EventsModule struct{ c *VelixClient }
 
-// List retorna todos os eventos do tenant.
-func (m *EventsModule) List(ctx context.Context) ([]Event, error) {
-	raw, err := m.c.do(ctx, http.MethodGet, "/v1/events", nil)
+// CreateGuest cria um convidado de evento. Escopo exigido: events:write.
+// POST /v1/api/events/{id}/guests.
+func (m *EventsModule) CreateGuest(ctx context.Context, eventID string, req CreateGuestRequest) (*GuestResponse, error) {
+	raw, err := m.c.do(ctx, http.MethodPost, fmt.Sprintf("/v1/api/events/%s/guests", eventID), req)
 	if err != nil {
 		return nil, err
 	}
-	var events []Event
-	if err := json.Unmarshal(raw, &events); err != nil {
-		return nil, fmt.Errorf("velix: decode events: %w", err)
+	var result GuestResponse
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, fmt.Errorf("velix: decode guest: %w", err)
 	}
-	return events, nil
+	return &result, nil
 }
 
-// Get retorna um evento pelo ID.
-func (m *EventsModule) Get(ctx context.Context, id string) (*Event, error) {
-	raw, err := m.c.do(ctx, http.MethodGet, "/v1/events/"+id, nil)
+// GetGuest consulta um convidado de evento, incluindo status de checkin.
+// Escopo exigido: events:read. GET /v1/api/events/{id}/guests/{guestId}.
+func (m *EventsModule) GetGuest(ctx context.Context, eventID, guestID string) (*GuestResponse, error) {
+	raw, err := m.c.do(ctx, http.MethodGet, fmt.Sprintf("/v1/api/events/%s/guests/%s", eventID, guestID), nil)
 	if err != nil {
 		return nil, err
 	}
-	var e Event
-	if err := json.Unmarshal(raw, &e); err != nil {
-		return nil, fmt.Errorf("velix: decode event: %w", err)
+	var result GuestResponse
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, fmt.Errorf("velix: decode guest: %w", err)
 	}
-	return &e, nil
-}
-
-// Create cria um novo evento.
-func (m *EventsModule) Create(ctx context.Context, input CreateEventInput) (*Event, error) {
-	raw, err := m.c.do(ctx, http.MethodPost, "/v1/events", input)
-	if err != nil {
-		return nil, err
-	}
-	var e Event
-	if err := json.Unmarshal(raw, &e); err != nil {
-		return nil, fmt.Errorf("velix: decode event: %w", err)
-	}
-	return &e, nil
-}
-
-// Configure atualiza configurações de um evento.
-func (m *EventsModule) Configure(ctx context.Context, id string, cfg EventConfigInput) error {
-	_, err := m.c.do(ctx, http.MethodPatch, fmt.Sprintf("/v1/events/%s/config", id), cfg)
-	return err
+	return &result, nil
 }

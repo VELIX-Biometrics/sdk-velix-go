@@ -1,86 +1,125 @@
 package velix
 
-// CheckinResult é o resultado de uma identificação biométrica.
-type CheckinResult struct {
-	Passed   bool   `json:"passed"`
-	PersonID string `json:"personId,omitempty"`
-	Message  string `json:"message,omitempty"`
+// ── Onboarding (Velix.ID) — POST /v1/api/onboarding ────────────────────────
+
+// OnboardingRequest contrato real de OnboardingDto (src/modules/onboarding/dto/onboarding.dto.ts).
+type OnboardingRequest struct {
+	Name         string         `json:"name"`
+	Email        string         `json:"email,omitempty"`
+	Phone        string         `json:"phone,omitempty"`
+	Document     string         `json:"document,omitempty"`
+	DocumentType string         `json:"document_type,omitempty"` // CPF, CNPJ, RG, PASSPORT, OTHER
+	ExternalID   string         `json:"external_id,omitempty"`
+	Metadata     map[string]any `json:"metadata,omitempty"`
+	Frames       []string       `json:"frames"` // JPEG base64, sem prefixo data URI, mínimo 1
+	Role         string         `json:"role,omitempty"`          // member, admin, tenant_admin
+	AccessGroups []string       `json:"access_groups,omitempty"`
 }
 
-// Person representa um colaborador cadastrado no tenant.
-type Person struct {
-	ID          string `json:"id"`
+// FrameResult resultado de processamento de um frame individual de onboarding.
+type FrameResult struct {
+	FrameIndex     int     `json:"frame_index"`
+	QualityPassed  bool    `json:"quality_passed"`
+	QualityScore   float64 `json:"quality_score"`
+	LivenessPassed bool    `json:"liveness_passed"`
+}
+
+// OnboardingResponse conteúdo de Envelope.data para POST /v1/api/onboarding.
+type OnboardingResponse struct {
+	PersonID        string        `json:"person_id"`
+	IdentityID      string        `json:"identity_id"`
+	Enrolled        bool          `json:"enrolled"`
+	FramesProcessed int           `json:"frames_processed"`
+	FramesResults   []FrameResult `json:"frames_results"`
+	EmbeddingID     *string       `json:"embedding_id"`
+	Message         string        `json:"message"`
+}
+
+// ── Checkin (Velix.ID) — POST /v1/api/checkin/identify ─────────────────────
+
+// LivenessSample amostra de liveness ativo (contrato mantém camelCase no wire).
+type LivenessSample struct {
+	Action      string `json:"action"` // center, move_closer, move_away
+	ImageBase64 string `json:"imageBase64"`
+}
+
+// LivenessBlock bloco opcional de prova de vida ativa.
+type LivenessBlock struct {
+	Token   string           `json:"token"`
+	Samples []LivenessSample `json:"samples"`
+}
+
+// CheckinLocation geolocalização opcional do checkin.
+type CheckinLocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Accuracy  float64 `json:"accuracy,omitempty"`
+}
+
+// CheckinIdentifyRequest contrato real de IdentifyFaceDto (src/modules/checkin/dto/identify-face.dto.ts).
+type CheckinIdentifyRequest struct {
+	ImageBase64 string           `json:"imageBase64"`
+	Images      []string         `json:"images,omitempty"`
+	TopK        int              `json:"topK,omitempty"`
+	Liveness    *LivenessBlock   `json:"liveness,omitempty"`
+	Location    *CheckinLocation `json:"location,omitempty"`
+}
+
+// CheckinIdentifyResponse resultado da identificação. Score de liveness NUNCA
+// é exposto — apenas o booleano `matched`.
+type CheckinIdentifyResponse struct {
+	Matched      bool    `json:"matched"`
+	PersonID     *string `json:"person_id"`
+	QualityScore float64 `json:"quality_score"`
+	Message      string  `json:"message"`
+}
+
+// ── LGPD (Velix.ID) — POST /v1/api/deletion-request ────────────────────────
+
+// DeletionRequestBody corpo de POST /v1/api/deletion-request.
+type DeletionRequestBody struct {
+	PersonID string `json:"person_id"`
+}
+
+// DeletionRequestResponse conteúdo de Envelope.data para POST /v1/api/deletion-request.
+type DeletionRequestResponse struct {
+	ProtocolNumber string `json:"protocol_number"`
+	Message        string `json:"message"`
+}
+
+// ── Me (Velix.ID) — GET /v1/api/me/{personId} ───────────────────────────────
+
+// MeResponse conteúdo de Envelope.data para GET /v1/api/me/{personId}.
+type MeResponse struct {
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Email     *string `json:"email"`
+	Phone     *string `json:"phone"`
+	PhotoURL  *string `json:"photo_url"`
+	CreatedAt string  `json:"created_at"`
+}
+
+// ── Events (Velix Events) — /v1/api/events/{id}/guests ─────────────────────
+
+// CreateGuestRequest contrato real de create-guest.dto.ts.
+// Campos deste schema permanecem em camelCase no wire (birthDate, categoryId,
+// companionOf), diferente do restante da superfície /v1/api/* que é snake_case.
+type CreateGuestRequest struct {
 	Name        string `json:"name"`
-	Email       string `json:"email,omitempty"`
-	ExternalID  string `json:"externalId,omitempty"`
-	EnrolledAt  string `json:"enrolledAt,omitempty"`
-	CreatedAt   string `json:"createdAt"`
+	Email       string `json:"email"`
+	CPF         string `json:"cpf,omitempty"`
+	Phone       string `json:"phone,omitempty"`
+	BirthDate   string `json:"birthDate,omitempty"`
+	CategoryID  string `json:"categoryId,omitempty"`
+	CompanionOf string `json:"companionOf,omitempty"`
 }
 
-// CreatePersonInput parâmetros para criação de pessoa.
-type CreatePersonInput struct {
-	Name       string `json:"name"`
-	Email      string `json:"email,omitempty"`
-	ExternalID string `json:"externalId,omitempty"`
-}
-
-// UpdatePersonInput parâmetros para atualização de pessoa.
-type UpdatePersonInput struct {
-	Name       string `json:"name,omitempty"`
-	Email      string `json:"email,omitempty"`
-	ExternalID string `json:"externalId,omitempty"`
-}
-
-// EnrollInput parâmetros para enroll biométrico.
-type EnrollInput struct {
-	Frames []string `json:"frames"` // base64 JPEG
-}
-
-// Event representa um evento gerenciado pelo tenant.
-type Event struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	TenantID  string `json:"tenantId"`
-	Status    string `json:"status"`
-	CreatedAt string `json:"createdAt"`
-}
-
-// CreateEventInput parâmetros para criação de evento.
-type CreateEventInput struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	StartAt     string `json:"startAt,omitempty"`
-	EndAt       string `json:"endAt,omitempty"`
-}
-
-// EventConfigInput parâmetros para configuração de evento.
-type EventConfigInput struct {
-	CheckinMode    string `json:"checkinMode,omitempty"`
-	AllowWalkIn    bool   `json:"allowWalkIn,omitempty"`
-	BadgeTemplate  string `json:"badgeTemplate,omitempty"`
-}
-
-// TenantSettings configurações do tenant.
-type TenantSettings struct {
-	RequireLiveness       bool    `json:"requireLiveness"`
-	BiometricQualityLevel string  `json:"biometricQualityLevel"`
-	GeofenceRadiusMetros  float64 `json:"geofenceRadiusMetros"`
-	AllowOfflinePunch     bool    `json:"allowOfflinePunch"`
-	Timezone              string  `json:"timezone"`
-	WebhookURL            string  `json:"webhookUrl,omitempty"`
-}
-
-// ListResponse envelope paginado genérico.
-type ListResponse[T any] struct {
-	Data  []T `json:"data"`
-	Total int `json:"total"`
-	Page  int `json:"page"`
-	Limit int `json:"limit"`
-}
-
-// ListOptions parâmetros de paginação/filtro.
-type ListOptions struct {
-	Page   int
-	Limit  int
-	Search string
+// GuestResponse EventGuest — retornado por POST .../guests e GET .../guests/{guestId}.
+type GuestResponse struct {
+	ID         string  `json:"id"`
+	EventID    string  `json:"eventId"`
+	Name       string  `json:"name"`
+	Email      string  `json:"email"`
+	Status     string  `json:"status"`
+	CategoryID *string `json:"categoryId"`
 }

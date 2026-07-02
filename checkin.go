@@ -7,22 +7,17 @@ import (
 	"net/http"
 )
 
-// CheckinModule métodos de identificação biométrica.
+// CheckinModule identificação biométrica via API key (Velix.ID).
 type CheckinModule struct{ c *VelixClient }
 
-type facialPayload struct {
-	Frame          string   `json:"frame"`
-	LivenessSamples []string `json:"livenessSamples,omitempty"`
-}
-
-// Facial identifica uma pessoa por frame facial (base64 JPEG).
-func (m *CheckinModule) Facial(ctx context.Context, tenantSlug, frameBase64 string, livenessSamples ...string) (*CheckinResult, error) {
-	payload := facialPayload{Frame: frameBase64, LivenessSamples: livenessSamples}
-	raw, err := m.c.do(ctx, http.MethodPost, fmt.Sprintf("/v1/checkin/%s/identify", tenantSlug), payload)
+// Identify identifica uma pessoa por frame facial. Escopo exigido na API key:
+// checkin:write. POST /v1/api/checkin/identify.
+func (m *CheckinModule) Identify(ctx context.Context, req CheckinIdentifyRequest) (*CheckinIdentifyResponse, error) {
+	raw, err := m.c.do(ctx, http.MethodPost, "/v1/api/checkin/identify", req)
 	if err != nil {
 		return nil, err
 	}
-	var result CheckinResult
+	var result CheckinIdentifyResponse
 	if err := json.Unmarshal(raw, &result); err != nil {
 		return nil, fmt.Errorf("velix: decode checkin result: %w", err)
 	}

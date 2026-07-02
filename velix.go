@@ -22,14 +22,19 @@ type Config struct {
 	Timeout time.Duration // default: 30s
 }
 
-// VelixClient cliente principal do SDK.
+// VelixClient cliente principal do SDK. Cobre exclusivamente a superfície
+// real /v1/api/* protegida por API key (task #593/#656) — Velix.ID
+// (onboarding, checkin, LGPD, me) e cobertura mínima de Velix Events
+// (guests). Velix Time não tem endpoints implementados hoje: ver TimeModule.
 type VelixClient struct {
-	cfg     Config
-	http    *http.Client
-	Checkin *CheckinModule
-	Persons *PersonsModule
-	Events  *EventsModule
-	Tenants *TenantsModule
+	cfg        Config
+	http       *http.Client
+	Onboarding *OnboardingModule
+	Checkin    *CheckinModule
+	LGPD       *LGPDModule
+	Me         *MeModule
+	Events     *EventsModule
+	Time       *TimeModule
 }
 
 // NewClient cria um VelixClient configurado.
@@ -41,10 +46,12 @@ func NewClient(cfg Config) *VelixClient {
 		cfg:  cfg,
 		http: &http.Client{Timeout: cfg.Timeout},
 	}
+	c.Onboarding = &OnboardingModule{c}
 	c.Checkin = &CheckinModule{c}
-	c.Persons = &PersonsModule{c}
+	c.LGPD = &LGPDModule{c}
+	c.Me = &MeModule{c}
 	c.Events = &EventsModule{c}
-	c.Tenants = &TenantsModule{c}
+	c.Time = &TimeModule{c}
 	return c
 }
 
