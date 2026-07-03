@@ -12,7 +12,7 @@ Official Go SDK for the VELIX Biometrics platform — facial access control B2B 
 ## Installation
 
 ```bash
-go get github.com/velix-io/velix-sdk-go
+go get github.com/VELIX-Biometrics/sdk-velix-go
 ```
 
 ## Quick Start
@@ -23,7 +23,7 @@ package main
 import (
     "context"
     "fmt"
-    velix "github.com/velix-io/velix-sdk-go"
+    velix "github.com/VELIX-Biometrics/sdk-velix-go"
 )
 
 func main() {

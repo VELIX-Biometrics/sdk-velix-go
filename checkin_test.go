@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	velix "github.com/velix-io/velix-sdk-go"
+	velix "github.com/VELIX-Biometrics/sdk-velix-go"
 )
 
 func TestCheckinIdentify_Matched(t *testing.T) {

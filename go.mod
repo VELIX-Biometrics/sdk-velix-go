@@ -1,3 +1,3 @@
-module github.com/velix-io/velix-sdk-go
+module github.com/VELIX-Biometrics/sdk-velix-go
 
 go 1.22

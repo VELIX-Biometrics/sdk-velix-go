@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	velix "github.com/velix-io/velix-sdk-go"
+	velix "github.com/VELIX-Biometrics/sdk-velix-go"
 )
 
 const img = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
