@@ -1,6 +1,6 @@
 # velix-sdk-go — Go SDK ![version](https://img.shields.io/badge/version-0.1.0--alpha.1-orange)
 
-> ⚠️ **Alpha / pre-release.** This SDK targets a public API surface that does not yet fully exist on the VELIX backend (see internal task #593). Endpoints and auth may not work against production. Do not use in production integrations yet.
+> ⚠️ **Alpha / pre-release**, mas já publicado e confirmado funcionando de ponta a ponta contra a API real de staging (onboarding, LGPD, me, events). **pkg.go.dev:** https://pkg.go.dev/github.com/VELIX-Biometrics/sdk-velix-go
 
 Official Go SDK for the VELIX Biometrics platform — facial access control B2B SaaS.
 
