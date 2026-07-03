@@ -97,12 +97,27 @@ func (c *VelixClient) do(ctx context.Context, method, path string, body any) ([]
 	}
 
 	if resp.StatusCode >= 400 {
+		// Envelope real de erro: {"success":false,"error":{"code":"...","message":"..."}}.
+		// message/code no nível raiz não existem — ficava sempre vazio,
+		// mascarando a mensagem real da API (mesmo bug encontrado e
+		// corrigido nos SDKs Ruby, Lua e Elixir).
 		var apiErr struct {
 			Message string `json:"message"`
 			Code    string `json:"code"`
+			Error   struct {
+				Message string `json:"message"`
+				Code    string `json:"code"`
+			} `json:"error"`
 		}
 		_ = json.Unmarshal(raw, &apiErr)
-		return nil, classifyError(resp.StatusCode, apiErr.Message, apiErr.Code)
+		msg, code := apiErr.Message, apiErr.Code
+		if msg == "" {
+			msg = apiErr.Error.Message
+		}
+		if code == "" {
+			code = apiErr.Error.Code
+		}
+		return nil, classifyError(resp.StatusCode, msg, code)
 	}
 
 	// unwrap envelope { data: T }
