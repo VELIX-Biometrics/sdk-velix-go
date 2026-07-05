@@ -45,7 +45,7 @@ func main() {
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VELIX_API_URL` | Yes | API base URL (`https://api.velixbiometrics.com`) |
-| `VELIX_API_KEY` | Yes | Tenant API key (`vx_live_...` or `vx_sandbox_...`) |
+| `VELIX_API_KEY` | Yes | Tenant API key (`vx_live_...`) |
 
 ```go
 client := velix.NewClient(velix.Config{
