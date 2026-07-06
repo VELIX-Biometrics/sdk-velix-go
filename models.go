@@ -3,16 +3,20 @@ package velix
 // ── Onboarding (Velix.ID) — POST /v1/api/onboarding ────────────────────────
 
 // OnboardingRequest contrato real de OnboardingDto (src/modules/onboarding/dto/onboarding.dto.ts).
+// Name, Email, Phone, Document, DocumentType e Frames são obrigatórios.
 type OnboardingRequest struct {
-	Name         string         `json:"name"`
-	Email        string         `json:"email,omitempty"`
-	Phone        string         `json:"phone,omitempty"`
-	Document     string         `json:"document,omitempty"`
-	DocumentType string         `json:"document_type,omitempty"` // CPF, CNPJ, RG, PASSPORT, OTHER
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	Phone        string `json:"phone"`
+	Document     string `json:"document"`
+	DocumentType string `json:"document_type"` // CPF, CNPJ, RG, PASSPORT, OTHER
+	// BirthDate ISO 8601 (ex: "1990-05-20"). Opcional, mas necessário para
+	// calcular Age/IsMinor na resposta.
+	BirthDate    string         `json:"birth_date,omitempty"`
 	ExternalID   string         `json:"external_id,omitempty"`
 	Metadata     map[string]any `json:"metadata,omitempty"`
-	Frames       []string       `json:"frames"` // JPEG base64, sem prefixo data URI, mínimo 1
-	Role         string         `json:"role,omitempty"`          // member, admin, tenant_admin
+	Frames       []string       `json:"frames"`         // JPEG base64, sem prefixo data URI, mínimo 1
+	Role         string         `json:"role,omitempty"` // member, admin, tenant_admin
 	AccessGroups []string       `json:"access_groups,omitempty"`
 }
 
@@ -33,6 +37,9 @@ type OnboardingResponse struct {
 	FramesResults   []FrameResult `json:"frames_results"`
 	EmbeddingID     *string       `json:"embedding_id"`
 	Message         string        `json:"message"`
+	// Age calculada a partir de BirthDate — nil se BirthDate não foi informado.
+	Age     *int  `json:"age"`
+	IsMinor *bool `json:"is_minor"`
 }
 
 // ── Checkin (Velix.ID) — POST /v1/api/checkin/identify ─────────────────────
@@ -65,13 +72,21 @@ type CheckinIdentifyRequest struct {
 	Location    *CheckinLocation `json:"location,omitempty"`
 }
 
-// CheckinIdentifyResponse resultado da identificação. Score de liveness NUNCA
-// é exposto — apenas o booleano `matched`.
+// LivenessResult bloco de resultado de prova de vida. Score NUNCA é exposto —
+// apenas o booleano `ok`.
+type LivenessResult struct {
+	OK bool `json:"ok"`
+}
+
+// CheckinIdentifyResponse resultado da identificação — contrato real de
+// CheckinService.identifyFace (checkin.service.ts). Score de similaridade e
+// de liveness NUNCA são expostos — apenas os booleanos `match`/`liveness.ok`.
 type CheckinIdentifyResponse struct {
-	Matched      bool    `json:"matched"`
-	PersonID     *string `json:"person_id"`
-	QualityScore float64 `json:"quality_score"`
-	Message      string  `json:"message"`
+	Match       bool           `json:"match"`
+	SubjectID   *string        `json:"subjectId"`
+	SubjectName *string        `json:"subjectName"`
+	Liveness    LivenessResult `json:"liveness"`
+	Model       string         `json:"model"`
 }
 
 // ── LGPD (Velix.ID) — POST /v1/api/deletion-request ────────────────────────

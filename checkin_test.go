@@ -25,7 +25,13 @@ func TestCheckinIdentify_Matched(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"data": map[string]any{"matched": true, "person_id": "person-uuid", "quality_score": 0.92},
+			"data": map[string]any{
+				"match":       true,
+				"subjectId":   "person-uuid",
+				"subjectName": "Ana Silva",
+				"liveness":    map[string]any{"ok": true},
+				"model":       "adaface",
+			},
 		})
 	}))
 	defer srv.Close()
@@ -35,11 +41,14 @@ func TestCheckinIdentify_Matched(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !result.Matched {
-		t.Error("expected matched=true")
+	if !result.Match {
+		t.Error("expected match=true")
 	}
-	if result.PersonID == nil || *result.PersonID != "person-uuid" {
-		t.Errorf("expected person_id=person-uuid, got %v", result.PersonID)
+	if result.SubjectID == nil || *result.SubjectID != "person-uuid" {
+		t.Errorf("expected subjectId=person-uuid, got %v", result.SubjectID)
+	}
+	if !result.Liveness.OK {
+		t.Error("expected liveness.ok=true")
 	}
 }
 

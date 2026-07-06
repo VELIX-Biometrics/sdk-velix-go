@@ -1,6 +1,6 @@
-# velix-sdk-go — Go SDK ![version](https://img.shields.io/badge/version-0.1.0--alpha.1-orange)
+# sdk-velix-go — Go SDK ![version](https://img.shields.io/badge/version-0.1.0--alpha.1-orange)
 
-> ⚠️ **Alpha / pre-release**, mas já publicado e confirmado funcionando de ponta a ponta contra a API real de staging (onboarding, LGPD, me, events). **pkg.go.dev:** https://pkg.go.dev/github.com/VELIX-Biometrics/sdk-velix-go
+> ⚠️ **Alpha / pre-release**, mas já publicado e confirmado funcionando de ponta a ponta contra a API real de staging (onboarding, checkin, LGPD, me, events). **pkg.go.dev:** https://pkg.go.dev/github.com/VELIX-Biometrics/sdk-velix-go
 
 Official Go SDK for the VELIX Biometrics platform — facial access control B2B SaaS.
 
@@ -23,20 +23,23 @@ package main
 import (
     "context"
     "fmt"
+    "os"
+
     velix "github.com/VELIX-Biometrics/sdk-velix-go"
 )
 
 func main() {
+    ctx := context.Background()
     client := velix.NewClient(velix.Config{
         APIURL: "https://api.velixbiometrics.com",
-        APIKey: "vx_live_...",
+        APIKey: os.Getenv("VELIX_API_KEY"),
     })
 
-    result, err := client.Checkin.Facial(context.Background(), "tenant-slug", frameBase64)
+    result, err := client.Checkin.Identify(ctx, velix.CheckinIdentifyRequest{ImageBase64: frameBase64})
     if err != nil {
         panic(err)
     }
-    fmt.Println(result.Passed, result.PersonID)
+    fmt.Println(result.Match, result.SubjectID)
 }
 ```
 
@@ -45,7 +48,7 @@ func main() {
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VELIX_API_URL` | Yes | API base URL (`https://api.velixbiometrics.com`) |
-| `VELIX_API_KEY` | Yes | Tenant API key (`vx_live_...` or `vx_sandbox_...`) |
+| `VELIX_API_KEY` | Yes | Tenant API key (`vx_live_...`) |
 
 ```go
 client := velix.NewClient(velix.Config{
@@ -56,74 +59,58 @@ client := velix.NewClient(velix.Config{
 
 ## Modules
 
-| Module | Methods |
-|--------|---------|
-| `client.Checkin` | `Facial()`, `QR()`, `PIN()`, `GetHistory()` |
-| `client.Persons` | `List()`, `Get()`, `Create()`, `Update()`, `Delete()`, `Enroll()` |
-| `client.Events` | `List()`, `Get()`, `Create()`, `Configure()` |
-| `client.Tenants` | `Me()`, `UpdateSettings()` |
+| Module | Methods | Endpoint |
+|--------|---------|----------|
+| `client.Onboarding` | `Create(ctx, req)` | `POST /v1/api/onboarding` (escopo `onboarding:write`) |
+| `client.Checkin` | `Identify(ctx, req)` | `POST /v1/api/checkin/identify` (escopo `checkin:write`) |
+| `client.LGPD` | `DeletionRequest(ctx, personID)` | `POST /v1/api/deletion-request` (escopo `lgpd:write`) |
+| `client.Me` | `Get(ctx, personID)` | `GET /v1/api/me/{personId}` (escopo `me:read`) |
+| `client.Events` | `CreateGuest(ctx, eventID, req)`, `GetGuest(ctx, eventID, guestID)` | `POST`/`GET /v1/api/events/{id}/guests` (escopos `events:write`/`events:read`) |
+
+`client.Time` existe mas retorna erro — `api-velix-time` ainda não tem proxy público via BFF.
+
+## Onboarding Module
+
+```go
+result, err := client.Onboarding.Create(ctx, velix.OnboardingRequest{
+    Name:         "João Silva",
+    DocumentType: "CPF",
+    Document:     "00000000000",
+    Frames:       []string{frame1, frame2, frame3}, // mínimo 1, máximo 5
+})
+// result.PersonID, result.IdentityID, result.Enrolled, result.FramesResults
+```
 
 ## Checkin Module
 
 ```go
-ctx := context.Background()
-
-// Facial identification (base64 JPEG frame)
-result, err := client.Checkin.Facial(ctx, "tenant-slug", frameBase64)
-// result.Passed == true
-// result.PersonID == "uuid"
-// result.PersonName == "João Silva"
-
-// QR code checkin
-result, err := client.Checkin.QR(ctx, "tenant-slug", qrToken)
-
-// PIN checkin
-result, err := client.Checkin.PIN(ctx, "tenant-slug", pin)
-
-// Paginated history
-history, err := client.Checkin.GetHistory(ctx, "tenant-slug", &velix.ListOptions{Page: 1, Limit: 20})
+result, err := client.Checkin.Identify(ctx, velix.CheckinIdentifyRequest{ImageBase64: frameBase64})
+// result.Match, result.SubjectID, result.SubjectName, result.Liveness.OK, result.Model
 ```
 
-## Persons Module
+Score de similaridade e de liveness nunca são expostos — apenas os booleanos `Match`/`Liveness.OK`.
+
+## LGPD Module
 
 ```go
-// List with optional search
-list, err := client.Persons.List(ctx, &velix.ListOptions{Page: 1, Limit: 20, Search: "João"})
+result, err := client.LGPD.DeletionRequest(ctx, personID)
+// result.ProtocolNumber
+```
 
-// Get by ID
-person, err := client.Persons.Get(ctx, "uuid")
+## Me Module
 
-// Create
-created, err := client.Persons.Create(ctx, velix.CreatePersonInput{
-    Name:       "João Silva",
-    Email:      "joao@company.com",
-    ExternalID: "EMP-001",
-})
-
-// Update
-err = client.Persons.Update(ctx, "uuid", velix.UpdatePersonInput{Name: "João B. Silva"})
-
-// Enroll biometrics (minimum 3 base64 frames)
-err = client.Persons.Enroll(ctx, "uuid", []string{frame1, frame2, frame3})
-
-// Delete
-err = client.Persons.Delete(ctx, "uuid")
+```go
+person, err := client.Me.Get(ctx, personID)
 ```
 
 ## Events Module
 
 ```go
-list,    err := client.Events.List(ctx, &velix.ListOptions{Page: 1, Limit: 20})
-event,   err := client.Events.Get(ctx, "uuid")
-created, err := client.Events.Create(ctx, velix.CreateEventInput{Name: "Conference 2026"})
-err = client.Events.Configure(ctx, "uuid", velix.EventConfig{CheckInOpen: true})
-```
-
-## Tenants Module
-
-```go
-tenant, err := client.Tenants.Me(ctx)
-err = client.Tenants.UpdateSettings(ctx, velix.TenantSettings{RequireLiveness: true})
+guest, err := client.Events.CreateGuest(ctx, eventID, velix.CreateGuestRequest{
+    Name:  "João Silva",
+    Email: "joao@company.com",
+})
+fetched, err := client.Events.GetGuest(ctx, eventID, guest.ID)
 ```
 
 ## Error Handling
@@ -131,7 +118,7 @@ err = client.Tenants.UpdateSettings(ctx, velix.TenantSettings{RequireLiveness: t
 ```go
 import "errors"
 
-result, err := client.Checkin.Facial(ctx, "slug", frame)
+result, err := client.Checkin.Identify(ctx, velix.CheckinIdentifyRequest{ImageBase64: frame})
 if err != nil {
     var authErr *velix.AuthError
     var bioErr  *velix.BiometricError
@@ -161,8 +148,8 @@ go test ./... -cover      # with coverage
 ## Local Development
 
 ```bash
-git clone <repo>
-cd velix-sdk-go
+git clone https://github.com/VELIX-Biometrics/sdk-velix-go.git
+cd sdk-velix-go
 go build ./...
 go vet ./...
 go test ./...
@@ -170,4 +157,4 @@ go test ./...
 
 ## Get an API Key
 
-Access the dashboard at **velixbiometrics.com** → Settings → API Keys → New Key.
+Talk to the Velix team during onboarding — there is no self-service sandbox.

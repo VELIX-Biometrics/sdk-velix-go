@@ -51,7 +51,7 @@ func main() {
 	if r, err := client.Checkin.Identify(ctx, velix.CheckinIdentifyRequest{ImageBase64: img}); err != nil {
 		result("checkin", false, err.Error())
 	} else {
-		result("checkin", true, fmt.Sprintf("matched=%v", r.Matched))
+		result("checkin", true, fmt.Sprintf("match=%v", r.Match))
 	}
 
 	if personID != "" {
