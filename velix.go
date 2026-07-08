@@ -35,6 +35,11 @@ type VelixClient struct {
 	Me         *MeModule
 	Events     *EventsModule
 	Time       *TimeModule
+	Contexts             *ContextModule
+	Memberships          *ContextMembershipModule
+	ContextRoles         *ContextRoleModule
+	ContextPermissions   *ContextPermissionModule
+	AuthorizationTokens  *AuthorizationTokenModule
 }
 
 // NewClient cria um VelixClient configurado.
@@ -52,6 +57,11 @@ func NewClient(cfg Config) *VelixClient {
 	c.Me = &MeModule{c}
 	c.Events = &EventsModule{c}
 	c.Time = &TimeModule{c}
+	c.Contexts = &ContextModule{c}
+	c.Memberships = &ContextMembershipModule{c}
+	c.ContextRoles = &ContextRoleModule{c}
+	c.ContextPermissions = &ContextPermissionModule{c}
+	c.AuthorizationTokens = &AuthorizationTokenModule{c}
 	return c
 }
 
