@@ -69,6 +69,31 @@ client := velix.NewClient(velix.Config{
 
 `client.Time` existe mas retorna erro — `api-velix-time` ainda não tem proxy público via BFF.
 
+| `client.Contexts` | `Create/Get/List/Update/Remove(ctx, ...)`, `Authorize(ctx, contextID, payload)`, `ListAuthorizationDecisions`, `CreateLinkRequest` | `/v1/contexts/*` (BearerAuth) |
+| `client.Memberships` | `Create`, `ListByContext`, `ListByIdentity`, `UpdateStatus`, `AddRoles`, `RemoveRoles` | `/v1/contexts/:id/memberships`, `/v1/identities/:id/memberships`, `/v1/memberships/*` |
+| `client.ContextRoles` | `Create`, `List`, `LinkPermissions` | `/v1/context-roles*` |
+| `client.ContextPermissions` | `Create`, `List` | `/v1/context-permissions` |
+| `client.AuthorizationTokens` | `Validate` | `POST /v1/authorization-tokens/validate` |
+
+## Identity Context
+
+```go
+ctxData, _ := client.Contexts.Create(ctx, map[string]any{"name": "Matriz SP", "contextType": "location"})
+decision, _ := client.Contexts.Authorize(ctx, contextID, map[string]any{
+    "identityId": "identity-uuid",
+    "permission": "access:enter",
+})
+membership, _ := client.Memberships.Create(ctx, contextID, map[string]any{
+    "identityId": "identity-uuid",
+    "roleIds":    []string{"role-uuid"},
+})
+// saída de contexto (definitiva, sem carência)
+_, _ = client.Memberships.UpdateStatus(ctx, membershipID, "revoked")
+// vínculo cross-tenant — fica PENDING até a pessoa consentir via magic link
+_, _ = client.Contexts.CreateLinkRequest(ctx, contextID, map[string]any{"identityId": "identity-uuid"})
+_, _ = client.AuthorizationTokens.Validate(ctx, "vat_...", false)
+```
+
 ## Onboarding Module
 
 ```go
